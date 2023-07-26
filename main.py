@@ -36,9 +36,17 @@ def getPoolPrice():
     #TODO: Combine this with TNG number, update when needed in sheet
 
 def getTNG():
-    
+    #Grab the website data, filter it down to just show the H.R. Milner row as array
+    response = requests.get('http://ets.aeso.ca/ets_web/ip/Market/Reports/CSDReportServlet')
+    soup = BeautifulSoup(response.text, 'html.parser')
+    table = soup.find_all('table')[9]
+    hrmTable = table.find_all('tr')[14]
+    hrmArray = hrmTable.find_all('td')
+
+    print(hrmArray[0].text.strip() , ' TNG:', hrmArray[2].text.strip())
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    getPoolPrice()
+    #getPoolPrice()
+    getTNG()
