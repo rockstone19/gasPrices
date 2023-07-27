@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-import openpyxl
+from openpyxl import load_workbook
 
 #Returns pool prices for the last 24 hours as a 2d array where
 #hourlyPrices[X][0] = date/hour & hourlyPrices[X][1] = price
@@ -41,8 +41,38 @@ def getTNG():
     #Return TNG for the hour as a float
     return (float(hrmTable[2].text.strip()))
 
+#Gets relevant data and update Excel spreadsheet as needed
+def updateSpreadSheet():
+    #Grab values from other functions
+    prices = getPoolPrice()
+    tng = getTNG()
+    #TODO: Grab data from Excel spreadsheet, see if it needs to be updated, update accordingly
+    wb = load_workbook(filename='gasPrices.xlsx')
+    sheet = wb.active
+
+    # Create a dictionary for the new data
+    newData = {hour: (price if price != -1 else 'NULL') for hour, price in prices}
+
+    #Read the existing data into a dictionary
+    existingData = {row[0].value: row[1].value for row in sheet.iter_rows(min_row=2, max_col=2, values_only=True)}
+
+    # Iterate over the new data and merge it with the existing data
+    for hour, price in newData.items():
+        if hour in existingData and price != 'NULL':
+            existingData[hour] = price
+
+    # Combine new data and existing data
+    combinedData = {**newData, **existingData}
+
+    # Write the combined data back to the Excel file
+    for i, (hour, price) in enumerate(combinedData.items(), start=2):
+        sheet.cell(row=i, column=1, value=hour)
+        sheet.cell(row=i, column=2, value=price)
+        sheet.cell(row=i, column=3, value=tng)
+
+    #Save the new data
+    wb.save("gasPrices.xlsx")
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    #getPoolPrice()
-    #getTNG()
+    updateSpreadSheet()
