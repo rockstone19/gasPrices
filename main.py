@@ -1,17 +1,15 @@
 import requests
-import time
-import pandas as pd
-import os
-import re
-from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
+import openpyxl
 
+#Returns pool prices for the last 24 hours as a 2d array where
+#hourlyPrices[X][0] = date/hour & hourlyPrices[X][1] = price
 def getPoolPrice():
-    # Send a GET request to get website data and convert to string
+    # Send a get request to get website data and convert to string
     response = requests.get('http://ets.aeso.ca/ets_web/ip/Market/Reports/SMPriceReportServlet')
     websiteText = response.text
 
-    #Parse the HTML for the correct table, find all entries in said table
+    #Parse the HTML for the correct table, find all entries in correct table
     soup = BeautifulSoup(websiteText, 'html.parser')
     table = soup.find_all('table')[2]
     rows = table.find_all('tr')
@@ -19,34 +17,32 @@ def getPoolPrice():
     #For storing updates in
     hourlyPrices = []
 
-    # Iterate over each row
+    # For each row in the table
     for row in rows:
-        # Get all columns in this row
         cols = row.find_all('td')
         # If not the header row, extract data and append
         if len(cols) >= 2:
             hour = cols[0].text.strip()
             price = cols[1].text.strip()
-            hourlyPrices.append((hour, price))
+            if(price == '-'):
+                hourlyPrices.append((hour, float(-1)))
+            else:
+                hourlyPrices.append((hour, float(price)))
 
-    # Print the hours and their prices
-    for hour, price in hourlyPrices:
-        print(f'Hour: {hour}, Price: {price}')
+    return hourlyPrices
 
-    #TODO: Combine this with TNG number, update when needed in sheet
-
+#Returns TNG number as a float
 def getTNG():
     #Grab the website data, filter it down to just show the H.R. Milner row as array
     response = requests.get('http://ets.aeso.ca/ets_web/ip/Market/Reports/CSDReportServlet')
     soup = BeautifulSoup(response.text, 'html.parser')
     table = soup.find_all('table')[9]
-    hrmTable = table.find_all('tr')[14]
-    hrmArray = hrmTable.find_all('td')
-
-    print(hrmArray[0].text.strip() , ' TNG:', hrmArray[2].text.strip())
+    hrmTable = table.find_all('tr')[14].find_all('td')
+    #Return TNG for the hour as a float
+    return (float(hrmTable[2].text.strip()))
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     #getPoolPrice()
-    getTNG()
+    #getTNG()
