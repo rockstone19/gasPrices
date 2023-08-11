@@ -68,13 +68,22 @@ def updateSpreadSheet():
                 and prevPrice[0][11:] == '24' and newestPrice[0][11:] == '01':
             sheet.cell(row=sheet.max_row - 1, column=3).value = tng
 
-    #Update previous values
-    for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
-        #If price for hour in sheet is null & there is an actual price, update it
-        if row[1].value == -1 and priceDict[row[0].value] != -1:
-            row[1].value = priceDict[row[0].value]
 
-    #Save the new data in the spreadsheet
+    #Update previous values
+    if (sheet.max_row - 24) <= 1:
+        startRow = 2
+    else:
+        startRow = sheet.max_row - 24
+    for row in sheet.iter_rows(min_row=startRow, max_row=sheet.max_row):
+        try:
+            #If price for hour in sheet is null & there is an actual price, update it
+            if row[1].value == -1 and priceDict[row[0].value] != -1:
+                row[1].value = priceDict[row[0].value]
+                print('Found price for', row[0].value)
+        except KeyError: #Nothing, just move on
+            print('Unable to find the price for', row[0].value)
+        finally:  #Here to ensure loop continues
+            x=1
     wb.save("gasPrices.xlsx")
 
 #Add the price from last hour (using just for initial setup)
@@ -126,23 +135,11 @@ def isYesterday(dayOne, dayTwo):
 if __name__ == '__main__':
     wb = load_workbook(filename='gasPrices.xlsx')
     sheet = wb.active
-    prices = getPoolPrice()
-    tng = getTNG()
-
-    # Transform data/existing spreadsheet data make it easier to manipulate via dictionaries
-    priceDict = {hour: (float(price) if price != '-' else float(-1))
-                 for hour, price in prices}
-    existingData = {str(row[0]): str(row[1]) for row in
-                    sheet.iter_rows(min_row=2, max_col=2, values_only=True)}
-
-    newestPrice = list(priceDict.items())[8]
-    prevPrice = list(priceDict.items())[9]
-
-    #if(sheet.max_row == 1):
-    #    addLastFullHour()
-    #while True:
-    #    #Update spreadsheet and print confirmation
-    #    updateSpreadSheet()
-    #    print(datetime.datetime.now().strftime("%m-%d-%Y %H:%M") ,"Sheet updated, waiting one hour...")
-    #    # Wait for 1 hour
-    #    time.sleep(3600)
+    if(sheet.max_row == 1):
+        addLastFullHour()
+    while True:
+        #Update spreadsheet and print confirmation
+        updateSpreadSheet()
+        print(datetime.datetime.now().strftime("%m-%d-%Y %H:%M") ,"Sheet updated, waiting one hour...")
+        # Wait for 1 hour
+        time.sleep(3600)
