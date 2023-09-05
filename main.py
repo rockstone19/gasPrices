@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from openpyxl import load_workbook
 import time
+import sys, os
 
 #Returns pool prices for the last 24 hours as a 2d array where
 #hourlyPrices[X][0] = date/hour & hourlyPrices[X][1] = price
@@ -41,13 +42,13 @@ def getTNG():
     return ((hrmTable[2].text.strip()))
 
 #Gets relevant data and update Excel spreadsheet as needed
-def updateSpreadSheet():
+def updateSpreadSheet(excelPath):
     #Grab values from other functions
     prices = getPoolPrice()
     tng = getTNG()
 
     #Open Excel spreadsheet
-    wb = load_workbook(filename='gasPrices.xlsx')
+    wb = load_workbook(excelPath)
     sheet = wb.active
 
     #Transform data/existing spreadsheet data make it easier to manipulate via dictionaries
@@ -84,19 +85,19 @@ def updateSpreadSheet():
             print('Unable to find the price for', row[0].value)
         finally:  #Here to ensure loop continues
             x=1
-    wb.save("gasPrices.xlsx")
+    wb.save(excelPath)
 
 #Add the price from last hour (using just for initial setup)
-def addLastFullHour():
+def addLastFullHour(excelPath):
     # Grab values from other function
     prices = getPoolPrice()
-    wb = load_workbook(filename='gasPrices.xlsx')
+    wb = load_workbook(excelPath)
     sheet = wb.active
     priceDict = {hour: (float(price) if price != '-' else float(-1)) for hour, price in prices}
     secondNewestPrice = list(priceDict.items())[1]
     sheet.append([secondNewestPrice[0], secondNewestPrice[1], '-'])
     # Save the new data
-    wb.save("gasPrices.xlsx")
+    wb.save(excelPath)
 
 #Check if two strings represent sequqntial days
 # (dayOne = today?, dayTwo = day before?)
@@ -133,13 +134,21 @@ def isYesterday(dayOne, dayTwo):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    wb = load_workbook(filename='gasPrices.xlsx')
+    #Get directory
+    if getattr(sys, 'frozen', False): #EXE
+        dirPath = os.path.dirname(sys.executable)
+    else:   #Python script
+        dirPath = os.path.dirname(os.path.abspath(__file__))
+
+    #Load workbook from directory
+    excelPath = str(dirPath) + '/gasPrices.xlsx'
+    wb = load_workbook(excelPath)
     sheet = wb.active
     if(sheet.max_row == 1):
-        addLastFullHour()
+        addLastFullHour(excelPath)
     while True:
         #Update spreadsheet and print confirmation
-        updateSpreadSheet()
+        updateSpreadSheet(excelPath)
         print(datetime.datetime.now().strftime("%m-%d-%Y %H:%M") ,"Sheet updated, waiting one hour...")
         # Wait for 1 hour
         time.sleep(3600)
